@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 import { Transaction, TransactionType, Category } from './types'
 
 interface FinanceContextType {
@@ -46,6 +46,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const loadData = useCallback(async () => {
     setIsLoading(true)
 
+    const supabase = getSupabase()
+
     const [categoriesResult, transactionsResult] = await Promise.all([
       supabase.from('categories').select('id, name, color, icon, type').order('name'),
       supabase
@@ -83,6 +85,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Categoria não encontrada')
       }
 
+      const supabase = getSupabase()
+
       const { data, error } = await supabase
         .from('transactions')
         .insert({
@@ -103,6 +107,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   )
 
   const deleteTransaction = useCallback(async (id: string) => {
+    const supabase = getSupabase()
     const { error } = await supabase.from('transactions').delete().eq('id', id)
     if (error) throw error
     setTransactions(prev => prev.filter(t => t.id !== id))
@@ -126,6 +131,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         if (!category) throw new Error('Categoria não encontrada')
         payload.category_id = category.id
       }
+
+      const supabase = getSupabase()
 
       const { data, error } = await supabase
         .from('transactions')
