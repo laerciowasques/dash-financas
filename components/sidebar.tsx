@@ -10,7 +10,7 @@ import {
   Receipt,
   PieChart,
   Lightbulb,
-  Settings,
+  TrendingUp,
   Menu,
   X,
   Wallet,
@@ -22,6 +22,7 @@ const navItems = [
   { href: '/transactions', label: 'Transações', icon: Receipt },
   { href: '/analytics', label: 'Análises', icon: PieChart },
   { href: '/insights', label: 'Insights', icon: Lightbulb },
+  { href: '/investments', label: 'Investimentos', icon: TrendingUp },
 ]
 
 const sidebarVariants = {
@@ -125,7 +126,10 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="flex-1 space-y-1 px-3 py-4">
             {navItems.map((item, index) => {
-              const isActive = pathname === item.href
+              const isActive =
+                item.href === '/'
+                  ? pathname === '/'
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`)
               const Icon = item.icon
 
               return (
