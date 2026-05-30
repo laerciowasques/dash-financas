@@ -1,11 +1,12 @@
 {
-  "name": "my-project",
+  "name": "dash-financas",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.13.0",
   "scripts": {
     "dev": "node scripts/start-dev.mjs",
-    "build": "node node_modules/next/dist/bin/next build --webpack",
-    "start": "node node_modules/next/dist/bin/next start",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint ."
   },
   "dependencies": {
