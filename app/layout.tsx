@@ -8,9 +8,8 @@ const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
-  title: 'FinanceFlow - Gestão de Finanças',
-  description: 'Sistema de gestão de despesas e receitas com análises e insights',
-  generator: 'v0.app',
+  title: 'Dash Finanças - Gestão Financeira',
+  description: 'Dashboard financeiro com Next.js, Supabase e Vercel',
   icons: {
     icon: [
       {
