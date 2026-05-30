@@ -110,7 +110,7 @@ export function Sidebar() {
                 <Wallet className="h-5 w-5 text-primary-foreground" />
               </motion.div>
               <div>
-                <span className="text-lg font-bold text-sidebar-foreground">FinanceFlow</span>
+                <span className="text-lg font-bold text-sidebar-foreground">Dash Finanças</span>
                 <p className="text-xs text-muted-foreground">Gestão Financeira</p>
               </div>
             </Link>
