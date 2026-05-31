@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { useIsMobile } from '@/components/ui/use-mobile'
+import { getSupabase } from '@/lib/supabase/client'
 import {
   LayoutDashboard,
   Receipt,
@@ -15,6 +17,7 @@ import {
   X,
   Wallet,
   ChevronRight,
+  LogOut,
 } from 'lucide-react'
 
 const navItems = [
@@ -58,9 +61,27 @@ const itemVariants = {
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const isMobile = useIsMobile()
   const sidebarState = isMobile ? (isMobileOpen ? 'open' : 'closed') : 'open'
+
+  async function handleSignOut() {
+    setIsSigningOut(true)
+    const supabase = getSupabase()
+    const { error } = await supabase.auth.signOut()
+    setIsSigningOut(false)
+
+    if (error) {
+      toast.error('Não foi possível sair. Tente novamente.')
+      return
+    }
+
+    toast.success('Sessão encerrada.')
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <>
@@ -171,7 +192,7 @@ export function Sidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="border-t border-sidebar-border p-4">
+          <div className="space-y-3 border-t border-sidebar-border p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -186,6 +207,16 @@ export function Sidebar() {
                 Registre suas despesas diariamente para ter um controle mais preciso.
               </p>
             </motion.div>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
+            >
+              <LogOut className="h-5 w-5" />
+              {isSigningOut ? 'Saindo...' : 'Sair'}
+            </button>
           </div>
         </div>
       </motion.aside>
