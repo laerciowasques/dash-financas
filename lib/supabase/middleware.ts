@@ -54,12 +54,17 @@ export async function updateSession(request: NextRequest) {
   if (code) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/callback'
+    url.searchParams.delete('code')
 
-    if (pathname.startsWith('/login/redefinir-senha')) {
-      url.searchParams.set('next', '/login/redefinir-senha')
-    } else if (!url.searchParams.get('next')) {
-      url.searchParams.set('next', pathname === '/login' ? '/auth/verificado' : '/login/redefinir-senha')
-    }
+    const nextPath =
+      pathname.startsWith('/login/redefinir-senha') || pathname === '/'
+        ? '/login/redefinir-senha'
+        : pathname === '/login'
+          ? '/auth/verificado'
+          : '/login/redefinir-senha'
+
+    url.searchParams.set('next', request.nextUrl.searchParams.get('next') ?? nextPath)
+    url.searchParams.set('code', code)
 
     if (pathname === '/' || pathname === '/login' || pathname.startsWith('/login/')) {
       return NextResponse.redirect(url)

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getSupabaseEnvError } from '@/lib/supabase/env'
-import { getRecoveryRedirectUrl } from '@/lib/auth-recovery'
+import { getAuthCallbackUrl, getSiteUrlConfigError } from '@/lib/site-url'
 import { formatAuthError } from '@/lib/supabase/errors'
 
 export const maxDuration = 15
@@ -13,6 +13,11 @@ export async function POST(request: Request) {
 
   if (envError) {
     return NextResponse.json({ ok: false, error: envError }, { status: 500 })
+  }
+
+  const siteConfigError = getSiteUrlConfigError()
+  if (siteConfigError) {
+    return NextResponse.json({ ok: false, error: siteConfigError }, { status: 500 })
   }
 
   let body: { email?: string }
@@ -27,10 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'Informe seu e-mail.' }, { status: 400 })
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.headers.get('origin')
-  const redirectTo = siteUrl
-    ? `${siteUrl}/auth/callback?next=${encodeURIComponent('/login/redefinir-senha')}`
-    : getRecoveryRedirectUrl()
+  const redirectTo = getAuthCallbackUrl('/login/redefinir-senha')
 
   const supabase = createServerClient(supabaseUrl!, supabaseAnonKey!, {
     cookies: {

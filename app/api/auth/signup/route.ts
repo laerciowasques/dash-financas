@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { formatAuthError } from '@/lib/supabase/errors'
 import { getSupabaseEnvError } from '@/lib/supabase/env'
+import { getAuthCallbackUrl, getSiteUrlConfigError } from '@/lib/site-url'
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 
 export const maxDuration = 15
@@ -10,11 +11,14 @@ export const maxDuration = 15
 export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-
   const envError = getSupabaseEnvError(supabaseUrl, supabaseAnonKey)
   if (envError) {
     return NextResponse.json({ ok: false, error: envError }, { status: 500 })
+  }
+
+  const siteConfigError = getSiteUrlConfigError()
+  if (siteConfigError) {
+    return NextResponse.json({ ok: false, error: siteConfigError }, { status: 500 })
   }
 
   let body: { email?: string; password?: string }
@@ -53,14 +57,12 @@ export async function POST(request: Request) {
     },
   })
 
-  const redirectBase = siteUrl ?? request.headers.get('origin') ?? 'http://localhost:3000'
-
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${redirectBase}/auth/callback?next=/auth/verificado`,
+        emailRedirectTo: getAuthCallbackUrl('/auth/verificado'),
       },
     })
 
