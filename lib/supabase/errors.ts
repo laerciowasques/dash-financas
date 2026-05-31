@@ -1,6 +1,18 @@
+import { FetchTimeoutError } from '@/lib/fetch-with-timeout'
+
 type ErrorLike = { message?: string; code?: string; details?: string }
 
 export function formatAuthError(err: unknown): string {
+  if (err instanceof FetchTimeoutError) {
+    return (
+      err.message +
+      ' Verifique NEXT_PUBLIC_SUPABASE_URL na Vercel ou desative confirmação de e-mail em Supabase → Authentication → Providers → Email.'
+    )
+  }
+
+  if (err instanceof Error && err.name === 'AbortError') {
+    return 'Tempo esgotado ao conectar ao Supabase. Tente novamente em alguns segundos.'
+  }
   const message =
     typeof err === 'object' && err !== null && 'message' in err
       ? String((err as ErrorLike).message)

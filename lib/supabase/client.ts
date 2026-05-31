@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 
 let supabaseClient: SupabaseClient | null = null
 
@@ -23,7 +24,11 @@ export function createClient() {
     throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY inválida. Copie a chave anon em Supabase → API Keys.')
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      fetch: fetchWithTimeout,
+    },
+  })
 }
 
 export function getSupabase() {

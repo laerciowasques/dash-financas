@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSupabase } from '@/lib/supabase/client'
-import { getSiteUrl, runBackgroundUserSetup } from '@/lib/auth-helpers'
+import { runBackgroundUserSetup } from '@/lib/auth-helpers'
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 import { formatAuthError } from '@/lib/supabase/errors'
 import { AuthCard } from '@/components/auth-card'
 import { Input } from '@/components/ui/input'
@@ -57,21 +58,32 @@ export function LoginForm() {
 
     try {
       if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/auth/verificado`,
+        const res = await fetchWithTimeout(
+          '/api/auth/signup',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email: email.trim(), password }),
           },
-        })
+          12_000,
+        )
 
-        if (error) throw error
+        if (!res.headers.get('content-type')?.includes('application/json')) {
+          throw new Error('Resposta inválida do servidor ao criar conta.')
+        }
 
-        if (data.user && data.session) {
+        const payload = await res.json()
+
+        if (!res.ok || !payload.ok) {
+          throw new Error(payload.error ?? 'Não foi possível criar a conta.')
+        }
+
+        if (payload.hasSession) {
           afterAuthSuccess()
         } else {
           toast.success(
-            'Conta criada! Confirme o e-mail enviado pelo Supabase e depois faça login.',
+            'Conta criada! Confirme o e-mail enviado e depois faça login.',
           )
         }
       } else {

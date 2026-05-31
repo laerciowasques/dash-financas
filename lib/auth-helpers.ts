@@ -165,7 +165,7 @@ export async function setupUserViaApi(): Promise<SetupUserResult & { ok: boolean
       method: 'POST',
       credentials: 'include',
     },
-    8_000,
+    12_000,
   )
 
   const contentType = res.headers.get('content-type') ?? ''
