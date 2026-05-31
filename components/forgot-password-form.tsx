@@ -4,8 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
-import { getSupabase } from '@/lib/supabase/client'
-import { getSiteUrl } from '@/lib/auth-helpers'
+import { formatAuthError } from '@/lib/supabase/errors'
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 import { AuthCard } from '@/components/auth-card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,21 +25,31 @@ export function ForgotPasswordForm() {
     }
 
     setIsLoading(true)
-    const supabase = getSupabase()
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${getSiteUrl()}/auth/callback?next=/login/redefinir-senha`,
-    })
+    try {
+      const res = await fetchWithTimeout(
+        '/api/auth/forgot-password',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        },
+        12_000,
+      )
 
-    setIsLoading(false)
+      const payload = await res.json()
 
-    if (error) {
-      toast.error(error.message)
-      return
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload.error ?? 'Não foi possível enviar o e-mail.')
+      }
+
+      setEmailSent(true)
+      toast.success('E-mail de recuperação enviado! Verifique sua caixa de entrada.')
+    } catch (err) {
+      toast.error(formatAuthError(err))
+    } finally {
+      setIsLoading(false)
     }
-
-    setEmailSent(true)
-    toast.success('E-mail de recuperação enviado! Verifique sua caixa de entrada.')
   }
 
   return (
@@ -49,6 +59,11 @@ export function ForgotPasswordForm() {
           <p className="text-sm text-muted-foreground">
             Se <span className="font-medium text-foreground">{email}</span> estiver cadastrado,
             você receberá um e-mail com o link para criar uma nova senha.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            O link abre em{' '}
+            <span className="text-foreground">dash-financas-delta.vercel.app</span> — não em
+            localhost.
           </p>
           <Link
             href="/login"

@@ -35,12 +35,27 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const code = request.nextUrl.searchParams.get('code')
 
-  if (code && (pathname === '/' || pathname === '/login')) {
+  if (code) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/callback'
-    if (!url.searchParams.get('next')) {
-      url.searchParams.set('next', '/auth/verificado')
+
+    if (pathname.startsWith('/login/redefinir-senha')) {
+      url.searchParams.set('next', '/login/redefinir-senha')
+    } else if (!url.searchParams.get('next')) {
+      url.searchParams.set('next', pathname === '/login' ? '/auth/verificado' : '/login/redefinir-senha')
     }
+
+    if (pathname === '/' || pathname === '/login' || pathname.startsWith('/login/')) {
+      return NextResponse.redirect(url)
+    }
+  }
+
+  const token_hash = request.nextUrl.searchParams.get('token_hash')
+  const type = request.nextUrl.searchParams.get('type')
+
+  if (token_hash && type && (pathname === '/' || pathname.startsWith('/login'))) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/callback'
     return NextResponse.redirect(url)
   }
 
@@ -61,6 +76,11 @@ export async function updateSession(request: NextRequest) {
     url.pathname = request.nextUrl.searchParams.get('redirect') || '/'
     url.searchParams.delete('redirect')
     return NextResponse.redirect(url)
+  }
+
+  // Permite redefinir senha mesmo com sessão temporaria de recovery
+  if (user && pathname.startsWith('/login/redefinir-senha')) {
+    return supabaseResponse
   }
 
   return supabaseResponse

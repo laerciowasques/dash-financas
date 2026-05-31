@@ -1,24 +1,75 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSupabase } from '@/lib/supabase/client'
 import { registerSenhaRecord } from '@/lib/auth-helpers'
+import { establishSessionFromUrlHash } from '@/lib/auth-recovery'
+import { formatAuthError } from '@/lib/supabase/errors'
 import { AuthCard } from '@/components/auth-card'
 import { Button } from '@/components/ui/button'
 import { PasswordField } from '@/components/password-field'
 
 export function ResetPasswordForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingLink, setIsCheckingLink] = useState(true)
+  const [canReset, setCanReset] = useState(false)
+
+  useEffect(() => {
+    async function validateRecoveryLink() {
+      const erro = searchParams.get('erro')
+      if (erro === 'link-invalido') {
+        setIsCheckingLink(false)
+        toast.error('Link inválido ou expirado. Solicite um novo e-mail de recuperação.')
+        return
+      }
+
+      const code = searchParams.get('code')
+      if (code) {
+        router.replace(`/auth/callback?code=${code}&next=/login/redefinir-senha`)
+        return
+      }
+
+      try {
+        const supabase = getSupabase()
+
+        await establishSessionFromUrlHash(supabase)
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session) {
+          setCanReset(true)
+        } else {
+          toast.error(
+            'Sessão de recuperação não encontrada. Abra o link do e-mail novamente ou solicite um novo.',
+          )
+        }
+      } catch (err) {
+        toast.error(formatAuthError(err))
+      } finally {
+        setIsCheckingLink(false)
+      }
+    }
+
+    validateRecoveryLink()
+  }, [searchParams, router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (!canReset) {
+      toast.error('Link de recuperação inválido. Solicite um novo e-mail.')
+      return
+    }
 
     if (password.length < 6) {
       toast.error('A senha deve ter pelo menos 6 caracteres.')
@@ -37,7 +88,7 @@ export function ResetPasswordForm() {
 
     if (error) {
       setIsLoading(false)
-      toast.error(error.message)
+      toast.error(formatAuthError(error))
       return
     }
 
@@ -51,54 +102,81 @@ export function ResetPasswordForm() {
 
     setIsLoading(false)
     toast.success('Senha atualizada com sucesso!')
-    router.push('/')
+    router.push('/login')
     router.refresh()
+  }
+
+  if (isCheckingLink) {
+    return (
+      <AuthCard title="Nova senha" subtitle="Validando link de recuperação...">
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AuthCard>
+    )
   }
 
   return (
     <AuthCard title="Nova senha" subtitle="Defina sua nova senha de acesso">
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <PasswordField
-          id="password"
-          label="Nova senha"
-          value={password}
-          onChange={setPassword}
-          disabled={isLoading}
-          autoComplete="new-password"
-        />
+      {!canReset ? (
+        <div className="space-y-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            Não foi possível validar o link. Solicite um novo e-mail de recuperação.
+          </p>
+          <Button asChild className="w-full">
+            <Link href="/login/esqueci-senha">Solicitar novo link</Link>
+          </Button>
+          <Link
+            href="/login"
+            className="block text-center text-sm text-muted-foreground hover:text-primary"
+          >
+            Voltar ao login
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <PasswordField
+            id="password"
+            label="Nova senha"
+            value={password}
+            onChange={setPassword}
+            disabled={isLoading}
+            autoComplete="new-password"
+          />
 
-        <PasswordField
-          id="confirmPassword"
-          label="Confirmar nova senha"
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          disabled={isLoading}
-          autoComplete="new-password"
-        />
+          <PasswordField
+            id="confirmPassword"
+            label="Confirmar nova senha"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            disabled={isLoading}
+            autoComplete="new-password"
+          />
 
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="h-11 w-full rounded-xl text-base font-medium shadow-lg shadow-primary/25"
-          size="lg"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            'Salvar nova senha'
-          )}
-        </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="h-11 w-full rounded-xl text-base font-medium shadow-lg shadow-primary/25"
+            size="lg"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar nova senha'
+            )}
+          </Button>
 
-        <Link
-          href="/login"
-          className="block text-center text-sm text-muted-foreground hover:text-primary"
-        >
-          Voltar ao login
-        </Link>
-      </form>
+          <Link
+            href="/login"
+            className="block text-center text-sm text-muted-foreground hover:text-primary"
+          >
+            Voltar ao login
+          </Link>
+        </form>
+      )}
     </AuthCard>
   )
 }
