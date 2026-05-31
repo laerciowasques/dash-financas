@@ -61,7 +61,7 @@ export function LoginForm() {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/`,
+            emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/auth/verificado`,
           },
         })
 
