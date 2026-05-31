@@ -33,6 +33,22 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
+  const authError = request.nextUrl.searchParams.get('error')
+  const errorCode = request.nextUrl.searchParams.get('error_code')
+  const errorDescription = request.nextUrl.searchParams.get('error_description')
+
+  if (authError || errorCode) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.delete('error')
+    url.searchParams.delete('error_code')
+    url.searchParams.delete('error_description')
+    if (errorCode) url.searchParams.set('erro', errorCode)
+    else if (authError) url.searchParams.set('erro', authError)
+    if (errorDescription) url.searchParams.set('error_description', errorDescription)
+    return NextResponse.redirect(url)
+  }
+
   const code = request.nextUrl.searchParams.get('code')
 
   if (code) {

@@ -9,6 +9,7 @@ import { getSupabase } from '@/lib/supabase/client'
 import { registerSenhaRecord } from '@/lib/auth-helpers'
 import { establishSessionFromUrlHash } from '@/lib/auth-recovery'
 import { formatAuthError } from '@/lib/supabase/errors'
+import { getAuthErrorMessage } from '@/lib/auth-url-errors'
 import { AuthCard } from '@/components/auth-card'
 import { Button } from '@/components/ui/button'
 import { PasswordField } from '@/components/password-field'
@@ -25,9 +26,11 @@ export function ResetPasswordForm() {
   useEffect(() => {
     async function validateRecoveryLink() {
       const erro = searchParams.get('erro')
-      if (erro === 'link-invalido') {
+      const errorDescription = searchParams.get('error_description')
+
+      if (erro) {
         setIsCheckingLink(false)
-        toast.error('Link inválido ou expirado. Solicite um novo e-mail de recuperação.')
+        toast.error(getAuthErrorMessage(erro, errorDescription))
         return
       }
 
