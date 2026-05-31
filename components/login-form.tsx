@@ -1,24 +1,38 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { Wallet, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSupabase } from '@/lib/supabase/client'
+import { getSiteUrl, setupUserOnFirstAccess } from '@/lib/auth-helpers'
+import { AuthCard } from '@/components/auth-card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { PasswordField } from '@/components/password-field'
+
+type AuthMode = 'login' | 'signup'
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/'
 
+  const [mode, setMode] = useState<AuthMode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  async function afterAuthSuccess(userId: string, userEmail: string) {
+    const supabase = getSupabase()
+    await setupUserOnFirstAccess(supabase, userId, userEmail)
+    toast.success(mode === 'signup' ? 'Conta criada com sucesso!' : 'Login realizado com sucesso!')
+    router.push(redirectTo)
+    router.refresh()
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,111 +42,170 @@ export function LoginForm() {
       return
     }
 
-    setIsLoading(true)
-
-    const supabase = getSupabase()
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
-
-    setIsLoading(false)
-
-    if (error) {
-      toast.error(
-        error.message === 'Invalid login credentials'
-          ? 'E-mail ou senha incorretos.'
-          : error.message,
-      )
+    if (mode === 'signup' && password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres.')
       return
     }
 
-    toast.success('Login realizado com sucesso!')
-    router.push(redirectTo)
-    router.refresh()
+    if (mode === 'signup' && password !== confirmPassword) {
+      toast.error('As senhas não coincidem.')
+      return
+    }
+
+    setIsLoading(true)
+    const supabase = getSupabase()
+
+    try {
+      if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/`,
+          },
+        })
+
+        if (error) throw error
+
+        if (data.user && data.session) {
+          await afterAuthSuccess(data.user.id, data.user.email ?? email.trim())
+        } else {
+          toast.success(
+            'Conta criada! Confirme o e-mail enviado pelo Supabase e depois faça login.',
+          )
+        }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
+
+        if (error) {
+          toast.error(
+            error.message === 'Invalid login credentials'
+              ? 'E-mail ou senha incorretos.'
+              : error.message,
+          )
+          return
+        }
+
+        if (data.user) {
+          await afterAuthSuccess(data.user.id, data.user.email ?? email.trim())
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Não foi possível concluir a operação.'
+      toast.error(message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="w-full max-w-md"
+    <AuthCard
+      subtitle={
+        mode === 'login'
+          ? 'Acesse seu ambiente financeiro'
+          : 'Crie seu ambiente individual'
+      }
     >
-      <div className="rounded-2xl border border-border bg-card p-8 shadow-2xl shadow-primary/10">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <motion.div
-            whileHover={{ rotate: 360 }}
-            transition={{ duration: 0.5 }}
-            className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/30"
-          >
-            <Wallet className="h-7 w-7 text-primary-foreground" />
-          </motion.div>
-          <h1 className="text-2xl font-bold text-foreground">Dash Finanças</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gestão Financeira</p>
+      <div className="mb-6 flex rounded-xl bg-secondary/60 p-1">
+        <button
+          type="button"
+          onClick={() => setMode('login')}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all ${
+            mode === 'login'
+              ? 'bg-primary text-primary-foreground shadow'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Entrar
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('signup')}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all ${
+            mode === 'signup'
+              ? 'bg-primary text-primary-foreground shadow'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Criar conta
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="seu@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+            className="h-11 rounded-xl border-border bg-input/50"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-              className="h-11 rounded-xl border-border bg-input/50"
-            />
-          </div>
+        <PasswordField
+          id="password"
+          label="Senha"
+          value={password}
+          onChange={setPassword}
+          disabled={isLoading}
+          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+        />
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                className="h-11 rounded-xl border-border bg-input/50 pr-11"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                tabIndex={-1}
-                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          <Button
-            type="submit"
+        {mode === 'signup' && (
+          <PasswordField
+            id="confirmPassword"
+            label="Confirmar senha"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
             disabled={isLoading}
-            className="h-11 w-full rounded-xl text-base font-medium shadow-lg shadow-primary/25"
-            size="lg"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Entrando...
-              </>
-            ) : (
-              'Entrar'
-            )}
-          </Button>
-        </form>
+            autoComplete="new-password"
+          />
+        )}
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Use o usuário criado no painel do Supabase (Authentication → Users).
+        {mode === 'login' && (
+          <div className="flex justify-end">
+            <Link
+              href="/login/esqueci-senha"
+              className="text-sm text-primary hover:underline"
+            >
+              Esqueceu sua senha?
+            </Link>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="h-11 w-full rounded-xl text-base font-medium shadow-lg shadow-primary/25"
+          size="lg"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              {mode === 'signup' ? 'Criando conta...' : 'Entrando...'}
+            </>
+          ) : mode === 'signup' ? (
+            'Criar conta'
+          ) : (
+            'Entrar'
+          )}
+        </Button>
+      </form>
+
+      {mode === 'signup' && (
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Ao criar a conta, sua senha é registrada na tabela{' '}
+          <span className="text-foreground">senha</span> e seu ambiente financeiro é preparado
+          automaticamente.
         </p>
-      </div>
-    </motion.div>
+      )}
+    </AuthCard>
   )
 }

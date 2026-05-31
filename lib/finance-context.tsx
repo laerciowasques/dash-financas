@@ -47,6 +47,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
 
     const supabase = getSupabase()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setCategories([])
+      setTransactions([])
+      setIsLoading(false)
+      return
+    }
 
     const [categoriesResult, transactionsResult] = await Promise.all([
       supabase.from('categories').select('id, name, color, icon, type').order('name'),
@@ -86,6 +96,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
 
       const supabase = getSupabase()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) throw new Error('Usuário não autenticado')
 
       const { data, error } = await supabase
         .from('transactions')
@@ -95,6 +110,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           value: transaction.value,
           date: transaction.date,
           type: transaction.type,
+          user_id: user.id,
         })
         .select('id, description, value, date, type, categories(name)')
         .single()
