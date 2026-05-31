@@ -46,39 +46,42 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const loadData = useCallback(async () => {
     setIsLoading(true)
 
-    const supabase = getSupabase()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = getSupabase()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    if (!user) {
-      setCategories([])
-      setTransactions([])
+      if (!user) {
+        setCategories([])
+        setTransactions([])
+        return
+      }
+
+      const [categoriesResult, transactionsResult] = await Promise.all([
+        supabase.from('categories').select('id, name, color, icon, type').order('name'),
+        supabase
+          .from('transactions')
+          .select('id, description, value, date, type, categories(name)')
+          .order('date', { ascending: false }),
+      ])
+
+      if (categoriesResult.error) {
+        console.error('Erro ao carregar categorias:', categoriesResult.error.message)
+      } else {
+        setCategories(categoriesResult.data as Category[])
+      }
+
+      if (transactionsResult.error) {
+        console.error('Erro ao carregar transações:', transactionsResult.error.message)
+      } else {
+        setTransactions((transactionsResult.data as DbTransaction[]).map(mapTransaction))
+      }
+    } catch (err) {
+      console.error('Erro ao carregar dados financeiros:', err)
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    const [categoriesResult, transactionsResult] = await Promise.all([
-      supabase.from('categories').select('id, name, color, icon, type').order('name'),
-      supabase
-        .from('transactions')
-        .select('id, description, value, date, type, categories(name)')
-        .order('date', { ascending: false }),
-    ])
-
-    if (categoriesResult.error) {
-      console.error('Erro ao carregar categorias:', categoriesResult.error.message)
-    } else {
-      setCategories(categoriesResult.data as Category[])
-    }
-
-    if (transactionsResult.error) {
-      console.error('Erro ao carregar transações:', transactionsResult.error.message)
-    } else {
-      setTransactions((transactionsResult.data as DbTransaction[]).map(mapTransaction))
-    }
-
-    setIsLoading(false)
   }, [])
 
   useEffect(() => {

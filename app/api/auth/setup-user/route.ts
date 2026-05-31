@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { setupUserOnFirstAccess } from '@/lib/auth-helpers'
 import { formatAuthError } from '@/lib/supabase/errors'
 
+export const maxDuration = 10
+
 export async function POST() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Wallet, CheckCircle2, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { setupUserViaApi } from '@/lib/auth-helpers'
+import { runBackgroundUserSetup } from '@/lib/auth-helpers'
 
 export function VerificationSuccess() {
   useEffect(() => {
-    setupUserViaApi().catch((err) => console.warn('Setup após verificação:', err))
+    void runBackgroundUserSetup()
   }, [])
   return (
     <motion.div

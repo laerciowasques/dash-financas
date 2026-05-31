@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSupabase } from '@/lib/supabase/client'
-import { getSiteUrl, setupUserOnFirstAccess, setupUserViaApi } from '@/lib/auth-helpers'
+import { getSiteUrl, runBackgroundUserSetup } from '@/lib/auth-helpers'
 import { formatAuthError } from '@/lib/supabase/errors'
 import { AuthCard } from '@/components/auth-card'
 import { Input } from '@/components/ui/input'
@@ -27,23 +27,9 @@ export function LoginForm() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  async function afterAuthSuccess() {
-    try {
-      const setup = await setupUserViaApi()
-      if (setup.warnings?.length) {
-        console.warn('Setup parcial:', setup.warnings)
-      }
-    } catch {
-      const supabase = getSupabase()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user?.email) {
-        await setupUserOnFirstAccess(supabase, user.id, user.email)
-      }
-    }
-
+  function afterAuthSuccess() {
     toast.success(mode === 'signup' ? 'Conta criada com sucesso!' : 'Login realizado com sucesso!')
+    void runBackgroundUserSetup()
     router.push(redirectTo)
     router.refresh()
   }
@@ -82,7 +68,7 @@ export function LoginForm() {
         if (error) throw error
 
         if (data.user && data.session) {
-          await afterAuthSuccess()
+          afterAuthSuccess()
         } else {
           toast.success(
             'Conta criada! Confirme o e-mail enviado pelo Supabase e depois faça login.',
@@ -104,7 +90,7 @@ export function LoginForm() {
         }
 
         if (data.user) {
-          await afterAuthSuccess()
+          afterAuthSuccess()
         }
       }
     } catch (err) {
@@ -213,10 +199,8 @@ export function LoginForm() {
       </form>
 
       {mode === 'signup' && (
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Ao criar a conta, sua senha é registrada na tabela{' '}
-          <span className="text-foreground">senha</span> e seu ambiente financeiro é preparado
-          automaticamente.
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Bem vindo a revolução financeira.
         </p>
       )}
     </AuthCard>

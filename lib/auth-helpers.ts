@@ -86,10 +86,34 @@ export async function ensureUserEnvironment(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ ok: boolean; warning?: string }> {
-  const rpcResult = await seedCategoriesViaRpc(supabase, userId)
-  if (rpcResult.ok) return rpcResult
+  const directResult = await seedCategoriesDirect(supabase, userId)
+  if (directResult.ok) return directResult
 
-  return seedCategoriesDirect(supabase, userId)
+  return seedCategoriesViaRpc(supabase, userId)
+}
+
+/** Executa setup em segundo plano (nao bloqueia login). */
+export async function runBackgroundUserSetup(): Promise<void> {
+  try {
+    await setupUserViaApi()
+    return
+  } catch {
+    // segue para fallback client-side
+  }
+
+  try {
+    const { getSupabase } = await import('@/lib/supabase/client')
+    const supabase = getSupabase()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user?.email) {
+      await setupUserOnFirstAccess(supabase, user.id, user.email)
+    }
+  } catch (err) {
+    console.warn('Setup em segundo plano:', err)
+  }
 }
 
 /** Primeiro acesso: grava senha na tabela e prepara ambiente isolado (nao interrompe o cadastro). */
@@ -134,10 +158,15 @@ export function getSiteUrl() {
 
 /** Configura ambiente via API (resposta sempre JSON). */
 export async function setupUserViaApi(): Promise<SetupUserResult & { ok: boolean }> {
-  const res = await fetch('/api/auth/setup-user', {
-    method: 'POST',
-    credentials: 'include',
-  })
+  const { fetchWithTimeout } = await import('@/lib/fetch-with-timeout')
+  const res = await fetchWithTimeout(
+    '/api/auth/setup-user',
+    {
+      method: 'POST',
+      credentials: 'include',
+    },
+    8_000,
+  )
 
   const contentType = res.headers.get('content-type') ?? ''
   if (!contentType.includes('application/json')) {
