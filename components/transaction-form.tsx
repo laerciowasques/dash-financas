@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useFinance } from '@/lib/finance-context'
+import { formatFinanceError } from '@/lib/finance-errors'
 import { getCategoriesByType, TransactionType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +24,8 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ isOpen, onClose }: TransactionFormProps) {
-  const { addTransaction, categories } = useFinance()
+  const { addTransaction, categories, ensureUserEnvironment, isEnsuringEnvironment } =
+    useFinance()
   const [type, setType] = useState<TransactionType>('expense')
   const [description, setDescription] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -81,9 +83,7 @@ export function TransactionForm({ isOpen, onClose }: TransactionFormProps) {
       setDate(new Date().toISOString().split('T')[0])
       onClose()
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Não foi possível salvar a transação.'
-      toast.error(message)
+      toast.error(formatFinanceError(error))
     } finally {
       setIsSubmitting(false)
     }
@@ -163,9 +163,21 @@ export function TransactionForm({ isOpen, onClose }: TransactionFormProps) {
               <div>
                 <Label className="text-sm text-muted-foreground">Categoria</Label>
                 {categoriesForType.length === 0 ? (
-                  <p className="mt-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
-                    Nenhuma categoria disponível. Verifique a conexão com o Supabase.
-                  </p>
+                  <div className="mt-2 space-y-2 rounded-lg border border-dashed border-border p-3">
+                    <p className="text-sm text-muted-foreground">
+                      Seu ambiente ainda não tem categorias. Prepare-o para registrar receitas e
+                      despesas.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={isEnsuringEnvironment}
+                      onClick={() => ensureUserEnvironment()}
+                    >
+                      {isEnsuringEnvironment ? 'Preparando...' : 'Preparar meu ambiente'}
+                    </Button>
+                  </div>
                 ) : (
                   <Select value={categoryId} onValueChange={setCategoryId}>
                     <SelectTrigger className="mt-1.5 w-full border-border bg-secondary">

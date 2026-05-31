@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { usePathname } from 'next/navigation'
 import { useIsMobile } from '@/components/ui/use-mobile'
-import { getSupabase } from '@/lib/supabase/client'
+import { useFinance } from '@/lib/finance-context'
+import { LogoutButton } from '@/components/logout-button'
 import {
   LayoutDashboard,
   Receipt,
@@ -17,7 +17,7 @@ import {
   X,
   Wallet,
   ChevronRight,
-  LogOut,
+  User,
 } from 'lucide-react'
 
 const navItems = [
@@ -61,27 +61,10 @@ const itemVariants = {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
   const isMobile = useIsMobile()
   const sidebarState = isMobile ? (isMobileOpen ? 'open' : 'closed') : 'open'
-
-  async function handleSignOut() {
-    setIsSigningOut(true)
-    const supabase = getSupabase()
-    const { error } = await supabase.auth.signOut()
-    setIsSigningOut(false)
-
-    if (error) {
-      toast.error('Não foi possível sair. Tente novamente.')
-      return
-    }
-
-    toast.success('Sessão encerrada.')
-    router.push('/login')
-    router.refresh()
-  }
+  const { userEmail } = useFinance()
 
   return (
     <>
@@ -143,6 +126,20 @@ export function Sidebar() {
               <X className="h-5 w-5" />
             </button>
           </motion.div>
+
+          {userEmail && (
+            <div className="border-b border-sidebar-border px-4 py-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate">{userEmail}</span>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">Seus dados são privados</p>
+            </div>
+          )}
+
+          <div className="px-3 pt-3">
+            <LogoutButton variant="sidebar" />
+          </div>
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 px-3 py-4">
@@ -208,15 +205,6 @@ export function Sidebar() {
               </p>
             </motion.div>
 
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={isSigningOut}
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
-            >
-              <LogOut className="h-5 w-5" />
-              {isSigningOut ? 'Saindo...' : 'Sair'}
-            </button>
           </div>
         </div>
       </motion.aside>
