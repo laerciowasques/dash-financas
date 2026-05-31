@@ -1,0 +1,56 @@
+import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { setupUserOnFirstAccess } from '@/lib/auth-helpers'
+import { formatAuthError } from '@/lib/supabase/errors'
+
+export async function POST() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl?.includes('supabase.co') || !supabaseAnonKey) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          'Variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY inválidas na Vercel.',
+      },
+      { status: 500 },
+    )
+  }
+
+  const cookieStore = await cookies()
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          cookieStore.set(name, value, options),
+        )
+      },
+    },
+  })
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user?.email) {
+    return NextResponse.json({ ok: false, error: 'Usuário não autenticado.' }, { status: 401 })
+  }
+
+  try {
+    const result = await setupUserOnFirstAccess(supabase, user.id, user.email)
+    return NextResponse.json({
+      ok: true,
+      ...result,
+    })
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: formatAuthError(err) },
+      { status: 500 },
+    )
+  }
+}

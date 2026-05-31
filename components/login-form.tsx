@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSupabase } from '@/lib/supabase/client'
-import { getSiteUrl, setupUserOnFirstAccess } from '@/lib/auth-helpers'
+import { getSiteUrl, setupUserOnFirstAccess, setupUserViaApi } from '@/lib/auth-helpers'
+import { formatAuthError } from '@/lib/supabase/errors'
 import { AuthCard } from '@/components/auth-card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,9 +27,22 @@ export function LoginForm() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  async function afterAuthSuccess(userId: string, userEmail: string) {
-    const supabase = getSupabase()
-    await setupUserOnFirstAccess(supabase, userId, userEmail)
+  async function afterAuthSuccess() {
+    try {
+      const setup = await setupUserViaApi()
+      if (setup.warnings?.length) {
+        console.warn('Setup parcial:', setup.warnings)
+      }
+    } catch {
+      const supabase = getSupabase()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user?.email) {
+        await setupUserOnFirstAccess(supabase, user.id, user.email)
+      }
+    }
+
     toast.success(mode === 'signup' ? 'Conta criada com sucesso!' : 'Login realizado com sucesso!')
     router.push(redirectTo)
     router.refresh()
@@ -68,7 +82,7 @@ export function LoginForm() {
         if (error) throw error
 
         if (data.user && data.session) {
-          await afterAuthSuccess(data.user.id, data.user.email ?? email.trim())
+          await afterAuthSuccess()
         } else {
           toast.success(
             'Conta criada! Confirme o e-mail enviado pelo Supabase e depois faça login.',
@@ -90,12 +104,11 @@ export function LoginForm() {
         }
 
         if (data.user) {
-          await afterAuthSuccess(data.user.id, data.user.email ?? email.trim())
+          await afterAuthSuccess()
         }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Não foi possível concluir a operação.'
-      toast.error(message)
+      toast.error(formatAuthError(err))
     } finally {
       setIsLoading(false)
     }

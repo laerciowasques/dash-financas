@@ -5,23 +5,11 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Wallet, CheckCircle2, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { getSupabase } from '@/lib/supabase/client'
-import { setupUserOnFirstAccess } from '@/lib/auth-helpers'
+import { setupUserViaApi } from '@/lib/auth-helpers'
 
 export function VerificationSuccess() {
   useEffect(() => {
-    async function prepareEnvironment() {
-      const supabase = getSupabase()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (user?.email) {
-        await setupUserOnFirstAccess(supabase, user.id, user.email)
-      }
-    }
-
-    prepareEnvironment()
+    setupUserViaApi().catch((err) => console.warn('Setup após verificação:', err))
   }, [])
   return (
     <motion.div

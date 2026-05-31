@@ -13,6 +13,16 @@ export function createClient() {
     )
   }
 
+  if (!supabaseUrl.includes('supabase.co')) {
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_URL inválida. Use a URL do projeto Supabase (https://goppveejenbsedapffpp.supabase.co), não a URL da Vercel.',
+    )
+  }
+
+  if (supabaseAnonKey.includes('your_anon_key') || supabaseAnonKey.length < 20) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY inválida. Copie a chave anon em Supabase → API Keys.')
+  }
+
   return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
 
