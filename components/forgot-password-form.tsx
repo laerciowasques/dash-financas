@@ -60,11 +60,6 @@ export function ForgotPasswordForm() {
             Se <span className="font-medium text-foreground">{email}</span> estiver cadastrado,
             você receberá um e-mail com o link para criar uma nova senha.
           </p>
-          <p className="text-xs text-muted-foreground">
-            O link abre em{' '}
-            <span className="text-foreground">dash-financas-delta.vercel.app</span> — não em
-            localhost.
-          </p>
           <Link
             href="/login"
             className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
