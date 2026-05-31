@@ -76,7 +76,7 @@ export function LoginForm() {
         const payload = await res.json()
 
         if (!res.ok || !payload.ok) {
-          throw new Error(payload.error ?? 'Não foi possível criar a conta.')
+          throw new Error(formatAuthError({ message: payload.error ?? 'Não foi possível criar a conta.' }))
         }
 
         if (payload.hasSession) {

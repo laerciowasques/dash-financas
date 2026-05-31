@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { formatAuthError } from '@/lib/supabase/errors'
+import { getSupabaseEnvError } from '@/lib/supabase/env'
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 
 export const maxDuration = 15
@@ -11,11 +12,9 @@ export async function POST(request: Request) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
 
-  if (!supabaseUrl?.includes('supabase.co') || !supabaseAnonKey) {
-    return NextResponse.json(
-      { ok: false, error: 'Supabase não configurado na Vercel.' },
-      { status: 500 },
-    )
+  const envError = getSupabaseEnvError(supabaseUrl, supabaseAnonKey)
+  if (envError) {
+    return NextResponse.json({ ok: false, error: envError }, { status: 500 })
   }
 
   let body: { email?: string; password?: string }
@@ -66,7 +65,10 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 })
+      return NextResponse.json(
+        { ok: false, error: formatAuthError({ message: error.message }) },
+        { status: 400 },
+      )
     }
 
     return NextResponse.json({

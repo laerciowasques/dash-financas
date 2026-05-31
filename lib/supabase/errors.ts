@@ -40,5 +40,12 @@ export function formatAuthError(err: unknown): string {
     return 'Função de categorias não encontrada. Execute a migration multi_user_senha no Supabase.'
   }
 
+  if (message.toLowerCase().includes('invalid api key')) {
+    return (
+      'Chave API do Supabase inválida. No Supabase abra Project Settings → API Keys, copie a chave ' +
+      '"anon public" (Legacy) e cole em NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel. Depois clique em Redeploy.'
+    )
+  }
+
   return message
 }
