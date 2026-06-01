@@ -66,7 +66,13 @@ export async function updateSession(request: NextRequest) {
     url.searchParams.set('next', request.nextUrl.searchParams.get('next') ?? nextPath)
     url.searchParams.set('code', code)
 
-    if (pathname === '/' || pathname === '/login' || pathname.startsWith('/login/')) {
+    const isRedefinirSenha = pathname.startsWith('/login/redefinir-senha')
+
+    if (
+      pathname === '/' ||
+      pathname === '/login' ||
+      (pathname.startsWith('/login/') && !isRedefinirSenha)
+    ) {
       return NextResponse.redirect(url)
     }
   }

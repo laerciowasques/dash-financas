@@ -4,8 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { getSupabase } from '@/lib/supabase/client'
 import { formatAuthError } from '@/lib/supabase/errors'
-import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 import { AuthCard } from '@/components/auth-card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,20 +27,15 @@ export function ForgotPasswordForm() {
     setIsLoading(true)
 
     try {
-      const res = await fetchWithTimeout(
-        '/api/auth/forgot-password',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim() }),
-        },
-        12_000,
-      )
+      const supabase = getSupabase()
+      const redirectTo = `${window.location.origin}/login/redefinir-senha`
 
-      const payload = await res.json()
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+      })
 
-      if (!res.ok || !payload.ok) {
-        throw new Error(payload.error ?? 'Não foi possível enviar o e-mail.')
+      if (error) {
+        throw error
       }
 
       setEmailSent(true)
@@ -59,6 +54,10 @@ export function ForgotPasswordForm() {
           <p className="text-sm text-muted-foreground">
             Se <span className="font-medium text-foreground">{email}</span> estiver cadastrado,
             você receberá um e-mail com o link para criar uma nova senha.
+          </p>
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-left text-xs text-amber-100/90">
+            Abra o link do e-mail <span className="font-medium">no mesmo navegador</span> em que você
+            clicou em Enviar (Chrome no PC, por exemplo). Não use aba anônima nem outro aparelho.
           </p>
           <Link
             href="/login"

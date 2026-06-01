@@ -1,4 +1,5 @@
 import type { EmailOtpType, SupabaseClient } from '@supabase/supabase-js'
+import { getServerSiteUrl } from '@/lib/site-url'
 
 /** Processa tokens de recuperação no hash da URL (#access_token=...). */
 export async function establishSessionFromUrlHash(supabase: SupabaseClient): Promise<boolean> {
@@ -28,11 +29,7 @@ export async function establishSessionFromUrlHash(supabase: SupabaseClient): Pro
 }
 
 export function getRecoveryRedirectUrl(nextPath = '/login/redefinir-senha') {
-  const base =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
-
+  const base = typeof window !== 'undefined' ? window.location.origin : getServerSiteUrl()
   return `${base}/auth/callback?next=${encodeURIComponent(nextPath)}`
 }
 

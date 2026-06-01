@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getSupabaseEnvError } from '@/lib/supabase/env'
-import { getAuthCallbackUrl, getSiteUrlConfigError } from '@/lib/site-url'
+import { getPasswordRecoveryRedirectUrl, getSiteUrlConfigError } from '@/lib/site-url'
 import { formatAuthError } from '@/lib/supabase/errors'
 
 export const maxDuration = 15
@@ -32,8 +32,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'Informe seu e-mail.' }, { status: 400 })
   }
 
-  const redirectTo = getAuthCallbackUrl('/login/redefinir-senha')
-
   const supabase = createServerClient(supabaseUrl!, supabaseAnonKey!, {
     cookies: {
       getAll: () => [],
@@ -42,7 +40,10 @@ export async function POST(request: Request) {
   })
 
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    // PKCE exige code_verifier no navegador — use o formulario em /login/esqueci-senha (client).
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getPasswordRecoveryRedirectUrl(),
+    })
 
     if (error) {
       return NextResponse.json(

@@ -8,7 +8,7 @@ export function getAuthErrorMessage(code: string | null, description?: string | 
   }
 
   if (code === 'link-invalido') {
-    return 'Link inválido. Solicite um novo e-mail de recuperação.'
+    return 'Link inválido ou expirado. Em Esqueci senha, envie um novo e-mail e abra o link no mesmo navegador.'
   }
 
   if (description) {

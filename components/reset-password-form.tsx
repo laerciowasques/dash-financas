@@ -7,9 +7,9 @@ import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSupabase } from '@/lib/supabase/client'
 import { registerSenhaRecord } from '@/lib/auth-helpers'
-import { establishSessionFromUrlHash } from '@/lib/auth-recovery'
+import { establishSessionFromUrlHash, parseOtpParams } from '@/lib/auth-recovery'
 import { formatAuthError } from '@/lib/supabase/errors'
-import { getAuthErrorMessage } from '@/lib/auth-url-errors'
+import { getAuthErrorMessage, readAuthErrorsFromHash } from '@/lib/auth-url-errors'
 import { AuthCard } from '@/components/auth-card'
 import { Button } from '@/components/ui/button'
 import { PasswordField } from '@/components/password-field'
@@ -25,8 +25,10 @@ export function ResetPasswordForm() {
 
   useEffect(() => {
     async function validateRecoveryLink() {
-      const erro = searchParams.get('erro')
-      const errorDescription = searchParams.get('error_description')
+      const hashErrors = readAuthErrorsFromHash()
+      const erro = searchParams.get('erro') ?? hashErrors.code
+      const errorDescription =
+        searchParams.get('error_description') ?? hashErrors.description
 
       if (erro) {
         setIsCheckingLink(false)
@@ -34,26 +36,39 @@ export function ResetPasswordForm() {
         return
       }
 
-      const code = searchParams.get('code')
-      if (code) {
-        router.replace(`/auth/callback?code=${code}&next=/login/redefinir-senha`)
-        return
-      }
-
       try {
         const supabase = getSupabase()
+        const code = searchParams.get('code')
+
+        if (code) {
+          const { error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code)
+
+          if (exchangeError) {
+            throw exchangeError
+          }
+
+          window.history.replaceState(null, '', '/login/redefinir-senha')
+        }
+
+        const otpParams = parseOtpParams(searchParams)
+        if (otpParams) {
+          const { error: otpError } = await supabase.auth.verifyOtp(otpParams)
+          if (otpError) throw otpError
+          window.history.replaceState(null, '', '/login/redefinir-senha')
+        }
 
         await establishSessionFromUrlHash(supabase)
 
         const {
-          data: { session },
-        } = await supabase.auth.getSession()
+          data: { user },
+        } = await supabase.auth.getUser()
 
-        if (session) {
+        if (user) {
           setCanReset(true)
         } else {
           toast.error(
-            'Sessão de recuperação não encontrada. Abra o link do e-mail novamente ou solicite um novo.',
+            'Sessão de recuperação não encontrada. Solicite um novo e-mail no mesmo navegador em que clicou em "Enviar link".',
           )
         }
       } catch (err) {

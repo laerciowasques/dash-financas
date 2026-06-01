@@ -19,9 +19,19 @@ export function getServerSiteUrl(): string {
   return 'http://localhost:3000'
 }
 
+/** URL de redirect para o Supabase (deve estar na lista Redirect URLs). */
 export function getAuthCallbackUrl(nextPath = '/login/redefinir-senha') {
   const base = getServerSiteUrl()
-  return `${base}/auth/callback?next=${encodeURIComponent(nextPath)}`
+  const callback = `${base}/auth/callback`
+  if (nextPath === '/login/redefinir-senha') {
+    return callback
+  }
+  return `${callback}?next=${encodeURIComponent(nextPath)}`
+}
+
+/** Link do e-mail de recuperação — página que lê ?code= e #access_token=. */
+export function getPasswordRecoveryRedirectUrl() {
+  return `${getServerSiteUrl()}/login/redefinir-senha`
 }
 
 export function isLocalhostUrl(url: string) {

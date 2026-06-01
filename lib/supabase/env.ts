@@ -7,7 +7,10 @@ export function getSupabaseEnvError(
   }
 
   if (!url.includes('supabase.co')) {
-    return 'NEXT_PUBLIC_SUPABASE_URL deve ser https://goppveejenbsedapffpp.supabase.co (não use a URL da Vercel).'
+    return (
+      'NEXT_PUBLIC_SUPABASE_URL na Vercel está errada (parece URL do site). ' +
+      'Use https://goppveejenbsedapffpp.supabase.co — a URL do app (Vercel) vai em NEXT_PUBLIC_SITE_URL.'
+    )
   }
 
   if (!key?.trim()) {
