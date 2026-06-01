@@ -56,8 +56,9 @@ export function ForgotPasswordForm() {
             você receberá um e-mail com o link para criar uma nova senha.
           </p>
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-left text-xs text-amber-100/90">
-            Abra o link do e-mail <span className="font-medium">no mesmo navegador</span> em que você
-            clicou em Enviar (Chrome no PC, por exemplo). Não use aba anônima nem outro aparelho.
+            Após atualizar o template &quot;Reset password&quot; no Supabase (arquivo{' '}
+            <span className="font-medium">supabase/email-templates/reset-password.html</span>
+            ), o link do e-mail funciona em qualquer navegador.
           </p>
           <Link
             href="/login"

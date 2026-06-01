@@ -40,6 +40,13 @@ export function formatAuthError(err: unknown): string {
     return 'Função de categorias não encontrada. Execute a migration multi_user_senha no Supabase.'
   }
 
+  if (message.includes('PKCE code verifier')) {
+    return (
+      'Link de recuperação incompatível com este navegador. No Supabase, atualize o template ' +
+      '"Reset password" para usar token_hash (veja supabase/email-templates/reset-password.html) e peça um novo e-mail.'
+    )
+  }
+
   if (message.toLowerCase().includes('invalid api key')) {
     return (
       'Chave API do Supabase inválida. No Supabase abra Project Settings → API Keys, copie a chave ' +

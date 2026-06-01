@@ -36,27 +36,26 @@ export function ResetPasswordForm() {
         return
       }
 
+      const code = searchParams.get('code')
+      const otpParams = parseOtpParams(searchParams)
+
+      if (otpParams) {
+        const params = new URLSearchParams({
+          token_hash: otpParams.token_hash,
+          type: otpParams.type,
+          next: '/login/redefinir-senha',
+        })
+        window.location.href = `/auth/confirm?${params.toString()}`
+        return
+      }
+
+      if (code) {
+        window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/login/redefinir-senha`
+        return
+      }
+
       try {
         const supabase = getSupabase()
-        const code = searchParams.get('code')
-
-        if (code) {
-          const { error: exchangeError } =
-            await supabase.auth.exchangeCodeForSession(code)
-
-          if (exchangeError) {
-            throw exchangeError
-          }
-
-          window.history.replaceState(null, '', '/login/redefinir-senha')
-        }
-
-        const otpParams = parseOtpParams(searchParams)
-        if (otpParams) {
-          const { error: otpError } = await supabase.auth.verifyOtp(otpParams)
-          if (otpError) throw otpError
-          window.history.replaceState(null, '', '/login/redefinir-senha')
-        }
 
         await establishSessionFromUrlHash(supabase)
 

@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/verificado']
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/confirm', '/auth/verificado']
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -82,7 +82,10 @@ export async function updateSession(request: NextRequest) {
 
   if (token_hash && type && (pathname === '/' || pathname.startsWith('/login'))) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/callback'
+    url.pathname = '/auth/confirm'
+    if (!url.searchParams.get('next')) {
+      url.searchParams.set('next', '/login/redefinir-senha')
+    }
     return NextResponse.redirect(url)
   }
 
